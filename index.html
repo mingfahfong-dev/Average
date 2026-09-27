@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weighted Average Builder</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e8741e'/%3E%3Crect x='11' y='36' width='9' height='17' rx='1.5' fill='%23fff'/%3E%3Crect x='23' y='22' width='9' height='31' rx='1.5' fill='%23fff'/%3E%3Crect x='35' y='30' width='9' height='23' rx='1.5' fill='%23fff'/%3E%3Crect x='47' y='42' width='6' height='11' rx='1.5' fill='%23fff'/%3E%3Cpath d='M8 29h48' stroke='%23fff3e0' stroke-width='3' stroke-dasharray='4 3'/%3E%3Ccircle cx='32' cy='13' r='4' fill='%23fff3e0'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23e8741e'/%3E%3Crect x='11' y='36' width='9' height='17' rx='1.5' fill='%23fff'/%3E%3Crect x='23' y='22' width='9' height='31' rx='1.5' fill='%23fff'/%3E%3Crect x='35' y='30' width='9' height='23' rx='1.5' fill='%23fff'/%3E%3Crect x='47' y='42' width='6' height='11' rx='1.5' fill='%23fff'/%3E%3Cpath d='M8 29h48' stroke='%23fff3e0' stroke-width='3' stroke-dasharray='4 3'/%3E%3Ccircle cx='32' cy='13' r='4' fill='%23fff3e0'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f6f7; --panel:#fff; --ink:#1b2127; --muted:#5d6770; --line:#dde1e5; --soft:#eef0f2;
+  --brand:#e8741e; --ok:#2e7d4f; --bad:#b83a14; --warnbg:#fff4e5; --warnink:#8a4b08; --need:#fff7ee;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14181c; --panel:#1c2126; --ink:#e7eaed; --muted:#9aa4ad; --line:#2d343b; --soft:#232a30;
+    --ok:#6fcf97; --bad:#f08a5d; --warnbg:#3a2a14; --warnink:#f5c98a; --need:#2e2418;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14181c; --panel:#1c2126; --ink:#e7eaed; --muted:#9aa4ad; --line:#2d343b; --soft:#232a30;
+  --ok:#6fcf97; --bad:#f08a5d; --warnbg:#3a2a14; --warnink:#f5c98a; --need:#2e2418;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-variant-numeric:tabular-nums}
+.wrap{max-width:1320px;margin:0 auto;padding:24px 20px 48px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+header svg{flex:none}
+h1{font-size:22px;line-height:1.2;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px;margin:2px 0 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:18px}
+h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.sources{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.sources .panel{margin:0}
+textarea{width:100%;min-height:92px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--soft);
+  color:var(--ink);padding:10px;font:13px/1.4 Consolas,"SF Mono",Menlo,monospace}
+button{font:inherit;font-size:14px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 13px;cursor:pointer}
+button:hover{border-color:var(--brand)}
+button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.07)}
+button.link{border:0;background:none;padding:2px 4px;color:var(--muted);text-decoration:underline;font-size:13px}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:space-between}
+.muted{color:var(--muted);font-size:13px}
+.msg{font-size:13.5px;margin-top:8px;min-height:1.2em}
+.msg.err{color:var(--bad)}
+.src{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;border:1px solid var(--line);background:var(--soft)}
+.src.XRF{border-color:#2f6f9f} .src.NR{border-color:#8a5cc2}
+
+/* summary */
+.summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.stat{border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.stat .k{font-size:12.5px;color:var(--muted)}
+.stat .v{font-size:20px;font-weight:700;line-height:1.3}
+.stat input{width:100%;font:700 20px "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;border:1px solid var(--line);
+  border-radius:6px;background:var(--panel);color:var(--ink);padding:1px 6px}
+.v.ok{color:var(--ok)} .v.bad{color:var(--bad)}
+
+/* share bar: the memorable bit */
+.sharebar{display:flex;height:30px;border-radius:7px;overflow:hidden;border:1px solid var(--line);background:var(--soft);margin-bottom:6px}
+.sharebar div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600;min-width:0;overflow:hidden;white-space:nowrap;border-right:1px solid rgba(255,255,255,.5)}
+.sharebar div:last-child{border-right:0}
+.sharecap{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+
+/* table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px}
+table{border-collapse:collapse;width:100%;min-width:1180px;font-size:13.5px}
+th,td{padding:4px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{background:var(--soft);font-weight:600;font-size:12.5px;padding:7px 5px}
+th.l,td.l{text-align:left}
+tbody tr.off td{opacity:.45}
+tbody tr.off td:first-child{opacity:1}
+td input.c{width:62px;text-align:right;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--ink);
+  font:13.5px "IBM Plex Sans",system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:4px 5px}
+td input.c:hover{border-color:var(--line)}
+td input.c:focus{border-color:var(--brand);background:var(--panel)}
+td input.id{width:210px;text-align:left}
+td input.w{width:92px;border-color:var(--line);background:var(--panel);font-weight:600}
+td input.pct{width:76px}
+td input.need{background:var(--need);border-color:var(--line)}
+.dot{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;color:#fff;font-size:11.5px;font-weight:700}
+.del{border:0;background:none;color:var(--muted);font-size:18px;padding:0 6px;line-height:1}
+.del:hover{color:var(--bad)}
+tfoot td{background:var(--soft);font-weight:700;border-bottom:0;padding:8px 5px;font-size:14px}
+tfoot td.l{font-size:13.5px}
+tfoot sup{color:var(--bad);font-weight:600}
+.notes{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:8px 16px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+.chk{display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--muted)}
+@media (max-width:860px){.sources{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <svg width="44" height="44" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#e8741e"/><rect x="11" y="36" width="9" height="17" rx="1.5" fill="#fff"/><rect x="23" y="22" width="9" height="31" rx="1.5" fill="#fff"/><rect x="35" y="30" width="9" height="23" rx="1.5" fill="#fff"/><rect x="47" y="42" width="6" height="11" rx="1.5" fill="#fff"/><path d="M8 29h48" stroke="#fff3e0" stroke-width="3" stroke-dasharray="4 3"/><circle cx="32" cy="13" r="4" fill="#fff3e0"/></svg>
+  <div>
+    <h1>Weighted average builder</h1>
+    <p class="sub">Paste results from the XRF and non routine templates, set tonnes or %, and get the tonnage-weighted average.</p>
+  </div>
+</header>
+
+<div class="sources">
+  <section class="panel">
+    <div class="row end"><h2 style="margin:0">From XRF template</h2><button class="link" data-clear="XRF">Remove these rows</button></div>
+    <p class="muted" style="margin:4px 0 8px">Include the header row (IDENT … FE, P, SIO2 …). Rows are added to the preview.</p>
+    <textarea id="pasteXRF" spellcheck="false" placeholder="Paste XRF template rows here"></textarea>
+    <div class="msg" id="msgXRF"></div>
+  </section>
+  <section class="panel">
+    <div class="row end"><h2 style="margin:0">From non routine template</h2><button class="link" data-clear="NR">Remove these rows</button></div>
+    <p class="muted" style="margin:4px 0 8px">Include the header row (IDENT … LOI, FE, P …). Rows are added to the preview.</p>
+    <textarea id="pasteNR" spellcheck="false" placeholder="Paste non routine template rows here"></textarea>
+    <div class="msg" id="msgNR"></div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="row end" style="margin-bottom:12px">
+    <h2 style="margin:0">Preview</h2>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="onlyInc"> Show included rows only</label>
+      <button id="addRow">Add blank row</button>
+      <button id="exampleBtn">Load example</button>
+      <button id="clearAll">Clear all</button>
+      <button class="primary" id="copyBtn">Copy results</button>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="stat"><div class="k">Total tonnage</div><div class="v" id="sTotal">0</div></div>
+    <div class="stat"><div class="k"><label for="esls">Product in ESLS (t)</label></div><input id="esls" inputmode="decimal" placeholder="optional"></div>
+    <div class="stat"><div class="k">Difference in tonnage</div><div class="v" id="sDiff">n/a</div></div>
+    <div class="stat"><div class="k">Difference % of ESLS</div><div class="v" id="sDiffP">n/a</div></div>
+    <div class="stat"><div class="k">Formula check (total %)</div><div class="v" id="sCheck">n/a</div></div>
+  </div>
+
+  <div class="sharebar" id="bar" aria-label="Tonnage share of each included row"></div>
+  <div class="sharecap" id="barCap">Tonnage share of each included row appears here.</div>
+
+  <div class="tablewrap">
+    <table id="tbl">
+      <thead></thead><tbody></tbody><tfoot></tfoot>
+    </table>
+  </div>
+  <div class="notes">
+    Tonnes and % are linked. Type tonnes and % is worked out, or type % and tonnes are worked out. Tonnes also accept sums such as 7884+4307.
+    When every weight is entered as %, the % values are used directly against a 100 basis (or against the ESLS tonnage, if entered). The formula check should then read 100%.
+    Moisture comes from the Moisture template, so type it into the highlighted cells.
+    A blank result is left out of that column's average, and the other rows are re-weighted. The column is marked with an asterisk. Your Excel template counts a blank as zero instead.
+    Copy results gives the rows, tonnes, %, and the weighted average in the template's column order.
+  </div>
+</section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const AN=['MOISTURE','LOI','FE','P','SIO2','AL2O3','TIO2','CAO','MN','MGO','S','K2O'];
+const LBL=['Moisture','LOI','Fe','P','SiO2','Al2O3','TiO2','CaO','Mn','MgO','S','K2O'];
+const OUT=['MOISTURE','LOI','Fe','P','SiO2','Al2O3','TiO2','CaO','Mn','MgO','S','K2O'];
+const DP=[2,2,2,3,2,2,3,3,3,3,3,3];
+// column positions when no header row is pasted (0 = column A)
+const POS={
+  XRF:{TYPE:1,IDENT:2,TONNAGE:7,LOI:13,FE:16,P:17,SIO2:18,AL2O3:19,TIO2:20,CAO:21,MN:22,MGO:23,S:24,K2O:25},
+  NR:{TYPE:1,IDENT:2,TONNAGE:11,LOI:15,FE:19,P:20,SIO2:21,AL2O3:22,TIO2:23,CAO:24,MN:25,MGO:26,S:27,K2O:28}
+};
+const COLORS=['#e8741e','#2f6f9f','#8a5cc2','#2e8a6e','#c2456b','#b8861b','#4a5bd0','#6d7a86','#d0542a','#1f8fa6','#7a9a2e','#a5487a'];
+const $=id=>document.getElementById(id);
+let rows=[], seq=0, esls=NaN;
+
+const num=s=>{ if(s==null) return NaN; s=String(s).trim().replace(/,/g,''); if(s===''||s==='-') return NaN; const v=Number(s); return Number.isFinite(v)?v:NaN; };
+const sumExpr=s=>{ s=String(s).trim().replace(/,/g,''); if(/^[\d.\s+]+$/.test(s)&&s.includes('+')){const p=s.split('+').map(x=>num(x)); return p.every(ok)?p.reduce((a,b)=>a+b,0):NaN;} return num(s); };
+const ok=Number.isFinite;
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtN=(v,d)=>ok(v)?v.toFixed(d):'';
+const fmtT=v=>ok(v)?(Math.round(v*100)/100).toLocaleString('en-AU',{maximumFractionDigits:2}):'';
+
+function parse(text,fmt){
+  const lines=text.replace(/\r/g,'').split('\n').map(l=>l.split('\t'));
+  const hi=lines.findIndex(c=>{const u=c.map(x=>x.trim().toUpperCase()); return u.includes('IDENT')&&u.includes('FE');});
+  let map={}, data, note='';
+  if(hi>=0){
+    const h=lines[hi].map(x=>x.trim().toUpperCase());
+    ['IDENT','TONNAGE',...AN].forEach(k=>{const i=h.indexOf(k); if(i>=0) map[k]=i;});
+    if(map.IDENT>=1) map.TYPE=map.IDENT-1;
+    data=lines.slice(hi+1);
+  } else { map={...POS[fmt]}; data=lines; note=' No header row found, so '+(fmt==='XRF'?'XRF':'non routine')+' template column positions were used.'; }
+  if(map.IDENT===undefined||map.FE===undefined) throw new Error('Could not find IDENT and FE columns. Paste the header row too.');
+  const g=(c,k)=>map[k]===undefined?'':(c[map[k]]??'').trim();
+  const out=[];
+  data.forEach(c=>{
+    const ident=g(c,'IDENT'); if(!ident||ident.toUpperCase()==='IDENT') return;
+    const v={}; AN.forEach(k=>v[k]=k==='MOISTURE'?NaN:num(g(c,k)));
+    out.push({src:fmt,type:g(c,'TYPE').toUpperCase(),ident,v,t:num(g(c,'TONNAGE')),fromPct:false});
+  });
+  if(!out.length) throw new Error('No data rows found. Check the paste includes rows under the header.');
+  const anyT=out.some(r=>ok(r.t)&&r.t>0);
+  out.forEach(r=>{
+    const std=r.type==='STD'||r.type==='DUP', agg=/\bAVG\b|CARGO/i.test(r.ident);
+    r.inc = anyT ? (ok(r.t)&&r.t>0&&r.type!=='STD') : (!std&&!agg&&ok(r.v.FE));
+    if(!ok(r.t)) r.t=NaN;
+  });
+  return {out,note};
+}
+
+function addRows(list){ list.forEach(r=>{r.id=++seq; rows.push(r);}); }
+
+function handlePaste(fmt){
+  const ta=$('paste'+fmt), m=$('msg'+fmt);
+  const text=ta.value; if(!text.trim()) return;
+  try{
+    const {out,note}=parse(text,fmt); addRows(out); ta.value='';
+    m.className='msg'; m.textContent=`${out.length} row${out.length===1?'':'s'} added, ${out.filter(r=>r.inc).length} included.`+note;
+    render();
+  }catch(e){ m.className='msg err'; m.textContent=e.message; }
+}
+
+// ---------- weights ----------
+const incRows=()=>rows.filter(r=>r.inc);
+const tOf=r=>ok(r.t)&&r.t>0?r.t:0;
+function state(){
+  const inc=incRows(); const sum=inc.reduce((a,r)=>a+tOf(r),0);
+  const w=inc.filter(r=>tOf(r)>0);
+  const pctMode=w.length>0&&w.every(r=>r.fromPct);
+  const base=pctMode?(esls>0?esls:100):sum;
+  return {inc,sum,pctMode,base};
+}
+function pctOf(r,st){ if(!r.inc||!(st.base>0)) return NaN; return tOf(r)/st.base*100; }
+
+function setPct(r,p){
+  r.inc=true;
+  const others=rows.filter(x=>x!==r&&x.inc&&tOf(x)>0);
+  const O=others.reduce((a,x)=>a+tOf(x),0);
+  if(!others.length||others.every(x=>x.fromPct)){ r.t=p/100*(esls>0?esls:100); r.fromPct=true; }
+  else { if(p>=100) return false; r.t=p*O/(100-p); r.fromPct=false; }
+  return true;
+}
+function setEsls(v){
+  const st=state();
+  if(st.pctMode){ const old=st.base; const nb=v>0?v:100; rows.forEach(r=>{ if(r.fromPct&&tOf(r)>0) r.t=r.t/old*nb; }); }
+  esls=v;
+}
+
+function averages(){
+  const inc=incRows().filter(r=>tOf(r)>0);
+  return AN.map(k=>{
+    const have=inc.filter(r=>ok(r.v[k])); const W=have.reduce((a,r)=>a+r.t,0);
+    return {v:W>0?have.reduce((a,r)=>a+r.t*r.v[k],0)/W:NaN, n:have.length, m:inc.length};
+  });
+}
+
+// ---------- rendering ----------
+function render(){
+  const only=$('onlyInc').checked;
+  $('tbl').querySelector('thead').innerHTML=`<tr><th class="l" title="Include in average">Use</th><th class="l">#</th><th class="l">Source</th><th class="l">Sample identity</th>`+
+    LBL.map(l=>`<th>${l}</th>`).join('')+`<th>Tonnes</th><th>%</th><th></th></tr>`;
+  const vis=rows.filter(r=>!only||r.inc);
+  $('tbl').querySelector('tbody').innerHTML=vis.length?vis.map(r=>`
+    <tr data-id="${r.id}" class="${r.inc?'':'off'}">
+      <td class="l"><input type="checkbox" data-f="inc" ${r.inc?'checked':''} aria-label="Include ${esc(r.ident)}"></td>
+      <td class="l"><span class="dot" data-dot></span></td>
+      <td class="l"><span class="src ${r.src}">${r.src==='NR'?'Non routine':r.src==='XRF'?'XRF':'Manual'}</span>${r.type&&r.type!=='UNK'?` <span class="muted">${esc(r.type)}</span>`:''}</td>
+      <td class="l"><input class="c id" data-f="ident" value="${esc(r.ident)}" aria-label="Sample identity"></td>
+      ${AN.map((k,i)=>`<td><input class="c${k==='MOISTURE'&&!ok(r.v[k])&&r.inc?' need':''}" data-f="an" data-k="${k}" inputmode="decimal" value="${fmtRaw(r.v[k])}" aria-label="${LBL[i]}"></td>`).join('')}
+      <td><input class="c w" data-f="t" inputmode="decimal" value="${ok(r.t)?fmtRaw(r4(r.t,2)):''}" aria-label="Tonnes"></td>
+      <td><input class="c w pct" data-f="p" inputmode="decimal" aria-label="Percent"></td>
+      <td><button class="del" data-f="del" aria-label="Remove row" title="Remove row">×</button></td>
+    </tr>`).join(''):`<tr><td colspan="${AN.length+7}" class="empty">Paste from either template above, or load the example, to start.</td></tr>`;
+  update();
+}
+const r4=(v,d)=>Math.round(v*10**d)/10**d;
+const fmtRaw=v=>ok(v)?String(v):'';
+
+function update(){
+  const st=state(); const act=document.activeElement;
+  let ci=0; const colorOf=new Map();
+  rows.forEach(r=>{ if(r.inc&&tOf(r)>0) colorOf.set(r.id,{c:COLORS[ci%COLORS.length],n:++ci}); });
+  document.querySelectorAll('#tbl tbody tr[data-id]').forEach(tr=>{
+    const r=rows.find(x=>x.id==tr.dataset.id); if(!r) return;
+    const d=tr.querySelector('[data-dot]'), co=colorOf.get(r.id);
+    d.style.background=co?co.c:'transparent'; d.textContent=co?co.n:'';
+    const p=tr.querySelector('[data-f="p"]'), t=tr.querySelector('[data-f="t"]');
+    if(p!==act) p.value=ok(pctOf(r,st))&&r.inc?pctOf(r,st).toFixed(2):'';
+    if(t!==act) t.value=ok(r.t)?fmtRaw(r4(r.t,2)):'';
+    const m=tr.querySelector('[data-k="MOISTURE"]'); m.classList.toggle('need',r.inc&&!ok(r.v.MOISTURE));
+  });
+  // footer
+  const av=averages();
+  const totP=st.base>0?st.sum/st.base*100:NaN;
+  $('tbl').querySelector('tfoot').innerHTML=`<tr><td class="l" colspan="4">Weighted average</td>`+
+    av.map((a,i)=>`<td title="${a.n} of ${a.m} weighted rows have a value">${ok(a.v)?a.v.toFixed(DP[i]):'n/a'}${ok(a.v)&&a.n<a.m?'<sup>*</sup>':''}</td>`).join('')+
+    `<td>${fmtT(st.sum)}</td><td>${ok(totP)?totP.toFixed(2):''}</td><td></td></tr>`;
+  // summary
+  $('sTotal').textContent=fmtT(st.sum)||'0';
+  if(esls>0){ const d=esls-st.sum; $('sDiff').textContent=(d>0?'+':d<0?'−':'')+fmtT(Math.abs(d));
+    $('sDiffP').textContent=(d>0?'+':d<0?'−':'')+Math.abs(d/esls*100).toFixed(2)+'%'; }
+  else { $('sDiff').textContent='n/a'; $('sDiffP').textContent='n/a'; }
+  const ck=$('sCheck');
+  if(ok(totP)&&st.sum>0){ const good=Math.abs(totP-100)<0.005; ck.textContent=totP.toFixed(2)+'%'; ck.className='v '+(good?'ok':'bad'); ck.title=good?'':'Not 100%: the % weights do not add up'; }
+  else { ck.textContent='n/a'; ck.className='v'; }
+  // share bar
+  const w=rows.filter(r=>colorOf.has(r.id));
+  $('bar').innerHTML=w.map(r=>{const co=colorOf.get(r.id); const s=tOf(r)/st.sum*100;
+    return `<div style="width:${s}%;background:${co.c}" title="${esc(r.ident)}: ${s.toFixed(2)}%">${s>=7?co.n+' · '+s.toFixed(1)+'%':s>=3?co.n:''}</div>`;}).join('');
+  $('barCap').textContent=w.length?`${w.length} weighted row${w.length>1?'s':''}. `+(st.pctMode?'Weights entered as %.':'Weights entered as tonnes.'):'Tonnage share of each included row appears here.';
+}
+
+// ---------- events ----------
+const tbody=$('tbl').querySelector('tbody');
+tbody.addEventListener('input',e=>{
+  const el=e.target, tr=el.closest('tr[data-id]'); if(!tr) return;
+  const r=rows.find(x=>x.id==tr.dataset.id), f=el.dataset.f;
+  if(f==='ident') r.ident=el.value;
+  else if(f==='an') r.v[el.dataset.k]=num(el.value);
+  else if(f==='t'){ const v=sumExpr(el.value); r.t=v; r.fromPct=false; if(ok(v)&&v>0&&!r.inc){r.inc=true; tr.classList.remove('off'); tr.querySelector('[data-f="inc"]').checked=true;} }
+  else if(f==='p'){ const v=num(el.value); if(ok(v)&&v>=0){ const wasInc=r.inc; if(setPct(r,v)&&!wasInc){tr.classList.remove('off'); tr.querySelector('[data-f="inc"]').checked=true;} } else if(el.value.trim()===''){ r.t=NaN; } }
+  update();
+});
+tbody.addEventListener('change',e=>{ if(e.target.dataset.f==='inc'){ const r=rows.find(x=>x.id==e.target.closest('tr').dataset.id); r.inc=e.target.checked; render(); }});
+tbody.addEventListener('focusout',e=>{ if(e.target.dataset.f==='t'||e.target.dataset.f==='p') setTimeout(update,0); });
+tbody.addEventListener('click',e=>{ if(e.target.dataset.f==='del'){ const id=e.target.closest('tr').dataset.id; rows=rows.filter(x=>x.id!=id); render(); }});
+
+['XRF','NR'].forEach(f=>{
+  $('paste'+f).addEventListener('paste',()=>setTimeout(()=>handlePaste(f),0));
+  $('paste'+f).addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)) handlePaste(f); });
+});
+document.querySelectorAll('[data-clear]').forEach(b=>b.onclick=()=>{ const s=b.dataset.clear; rows=rows.filter(r=>r.src!==s); $('msg'+s).textContent=''; render(); });
+$('esls').addEventListener('input',e=>{ const v=sumExpr(e.target.value); setEsls(ok(v)&&v>0?v:NaN); update(); });
+$('onlyInc').onchange=render;
+$('addRow').onclick=()=>{ addRows([{src:'MAN',type:'',ident:'',v:Object.fromEntries(AN.map(k=>[k,NaN])),t:NaN,inc:true,fromPct:false}]); render();
+  const last=tbody.querySelector('tr[data-id]:last-child input.id'); last&&last.focus(); };
+$('clearAll').onclick=()=>{ if(rows.length&&!confirm('Remove all rows from the preview?')) return; rows=[]; $('esls').value=''; esls=NaN; ['XRF','NR'].forEach(f=>$('msg'+f).textContent=''); render(); };
+$('exampleBtn').onclick=()=>{
+  const ex=[
+    ['27068 MACF P563 01',[7.09,6.06,61,0.076,4.02,2.22,0.092,0.015,0.075,0.064,0.035,0.006],46021],
+    ['27068 MACF P510 01',[7.79,5.86,60.96,0.077,4.19,2.29,0.086,0.022,0.08,0.069,0.033,0.007],12191],
+    ['27068 MACF P563 02',[7.22,6.16,60.64,0.075,4.25,2.32,0.096,0.013,0.084,0.056,0.037,0.007],16330]];
+  addRows(ex.map(([id,v,t])=>({src:'MAN',type:'',ident:id,v:Object.fromEntries(AN.map((k,i)=>[k,v[i]])),t,inc:true,fromPct:false})));
+  $('esls').value='78464'; esls=78464; render();
+};
+
+function toTSV(){
+  const st=state(), av=averages();
+  const L=[['Sample Identity',...OUT,'TONNES','%'].join('\t')];
+  incRows().forEach(r=>L.push([r.ident,...AN.map(k=>fmtRaw(r.v[k])),ok(r.t)?r4(r.t,2):'',fmtN(pctOf(r,st),2)].join('\t')));
+  L.push(['WEIGHTED AVERAGE',...av.map((a,i)=>fmtN(a.v,DP[i])),r4(st.sum,2),fmtN(st.base>0?st.sum/st.base*100:NaN,2)].join('\t'));
+  if(esls>0){ L.push(''); L.push(['Product in ESLS',esls].join('\t')); L.push(['Difference in tonnage',r4(esls-st.sum,2)].join('\t')); }
+  return L.join('\n');
+}
+async function copy(t){ try{await navigator.clipboard.writeText(t);return true;}catch(e){ const a=document.createElement('textarea'); a.value=t; a.style.position='fixed'; a.style.opacity='0'; document.body.appendChild(a); a.select(); let r=false; try{r=document.execCommand('copy');}catch(_){} a.remove(); return r; } }
+let tt; const toast=m=>{const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),2400);};
+$('copyBtn').onclick=async()=>{ if(!incRows().length){toast('Nothing to copy yet. Include at least one row.');return;} toast(await copy(toTSV())?'Copied. Paste into Excel.':'Copy blocked by the browser. Select the table and copy manually.'); };
+
+render();
+})();
+</script>
+</body>
+</html>
